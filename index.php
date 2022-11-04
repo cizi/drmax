@@ -1,5 +1,5 @@
 <?php
-
+libxml_use_internal_errors(true); // because of the special chars on the web URL cannot be by default converted to HTML, this is just for sure to not display a warning
 require_once "./Setting.php";
 require_once "./FeedItem.php";
 
@@ -16,20 +16,19 @@ do {
     $dom = new DOMDocument();
     $dom->loadHTML($html);
     $finder = new DOMXPath($dom);
-    $dataTableData = $finder->query('//table[contains(@class,"itemlist")]/tr[contains(@class,"athing")]');
+    $dataTableData = $finder->query(Setting::XPATH_DATA_BASE . Setting::XPATH_DATA_BASE_TABLE_CLASS);
     if (!is_null($dataTableData)) {
         for ($i = 0; $i < count($dataTableData); $i++) {
           $id = $dataTableData[$i]->getAttribute('id');
           $titleLinkData = $dataTableData[$i]->getElementsByTagName('a')->item(1);
           $publicLink = $titleLinkData->getAttribute('href');
           $title = $titleLinkData->nodeValue;
-          $timestamp = $finder->query('//table[contains(@class,"itemlist")]/tr[' . ($i * 3 + 2) . ']/td[2]/span/span[2]');
-          $a = $finder->query('//table[contains(@class,"itemlist")]/tr[' . ($i * 3 + 2) . ']/td[2]/span/span[2]/a');
+          $timestamp = $finder->query(Setting::XPATH_DATA_BASE . sprintf(Setting::XPATH_DATA_ITEM_TIMESTAMP, ($i * 3 + 2)));
+          $a = $finder->query(Setting::XPATH_DATA_BASE . sprintf(Setting::XPATH_DATA_ITEM_INNER_LINK, ($i * 3 + 2)));
     
           if ($timestamp->count() === 0 || $a === null) {
-            continue;
+            continue;   // skipping record if don't find inner link or timestamp
           }
-          // 2022-11-02T08:28:21
           $timestampData = $timestamp->item(0)->getAttribute('title');
           $timestampDataAsObj = DateTime::createFromFormat('Y-m-d\TH:i:s', $timestampData);
     
@@ -37,7 +36,7 @@ do {
           if (!isset($feedItems[$id])) {
             $fe = new FeedItem(); 
             $fe->setId($id);
-            $fe->setTimestamp($timestampDataAsObj);
+            $fe->setTimestamp(DateTime::getLastErrors()['error_count'] === 0 ? $timestampDataAsObj : null);
             $fe->setInnerLink(Setting::URL . $a->item(0)->getAttribute('href'));
             $fe->setPublicLink($publicLink);
             $fe->setTitle($title);
@@ -56,9 +55,11 @@ do {
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
+  <?php
+    echo "Count of object: " . count($feedItems) . "<br>";
+  ?>
 <pre>
     <?php
-        echo "Count of object: " . count($feedItems) . "<br>";
         print_r($feedItems);
     ?>
 </pre>

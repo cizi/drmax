@@ -12,6 +12,10 @@ class FeedItem {
 
     private string $title;
 
+    public function __contsruct() {
+        // maybe create the object directly from constructor params instead of setters used in index.php, depends of next usage of this object :-) 
+    }
+
     public function getId(): int {
         return $this->id;
     }
